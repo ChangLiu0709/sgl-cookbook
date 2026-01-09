@@ -63,4 +63,3 @@ const ErnieConfigGenerator = () => {
 };
 
 export default ErnieConfigGenerator;
-
