@@ -2,7 +2,15 @@
 
 ## 1. Model Introduction
 
-**[ERNIE-4.5-21B](https://huggingface.co/baidu/ERNIE-4.5-21B-A3B-PT)** is a large language model developed by Baidu. ERNIE (Enhanced Representation through Knowledge Integration) 4.5 represents an advanced version of the ERNIE series, optimized for general-purpose tasks and conversational scenarios. The model features strong language understanding and generation capabilities, suitable for a wide range of natural language processing tasks. For local deployment, we recommend setting the sampling parameters to temperature = 1.0, top_p = 0.95. Recommended for general conversations, text generation, and various NLP tasks.
+The **ERNIE-4.5** series is a family of large language models developed by Baidu. ERNIE (Enhanced Representation through Knowledge Integration) 4.5 represents an advanced version of the ERNIE series, optimized for general-purpose tasks and conversational scenarios. The models feature strong language understanding and generation capabilities, suitable for a wide range of natural language processing tasks.
+
+### ERNIE-4.5-21B-A3B-PT
+
+**[ERNIE-4.5-21B-A3B-PT](https://huggingface.co/baidu/ERNIE-4.5-21B-A3B-PT)** is a 21 billion parameter model with 3 billion active parameters per token. For local deployment, we recommend setting the sampling parameters to temperature = 1.0, top_p = 0.95. Recommended for general conversations, text generation, and various NLP tasks.
+
+### ERNIE-4.5-300B-A47B-PT
+
+**[ERNIE-4.5-300B-A47B-PT](https://huggingface.co/baidu/ERNIE-4.5-300B-A47B-PT)** is a larger Mixture-of-Experts (MoE) model with 300 billion total parameters and 47 billion active parameters per token. The model features 64 experts with 8 active per token, supporting extremely long context windows of up to 131,072 tokens. This post-trained model is optimized for text-only tasks and offers enhanced capabilities for complex reasoning, long-form generation, and handling extensive context. For local deployment, we recommend setting the sampling parameters to temperature = 1.0, top_p = 0.95.
 
 **Key Features:**
 
@@ -32,7 +40,7 @@ For more detailed configuration tips, please refer to [ERNIE-4.5 Usage](https://
 
 ## 4. API Usage
 
-ERNIE-4.5 can be deployed with standard SGLang server configuration:
+ERNIE-4.5 models can be deployed with standard SGLang server configuration. The following example demonstrates deployment using ERNIE-4.5-21B-A3B-PT.
 
 ```shell
 python -m sglang.launch_server \

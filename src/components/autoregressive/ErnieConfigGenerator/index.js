@@ -6,6 +6,14 @@ const ErnieConfigGenerator = () => {
     modelFamily: 'baidu',
 
     options: {
+      modelsize: {
+        name: 'modelsize',
+        title: 'Model Size',
+        items: [
+          { id: '21b', label: '21B', subtitle: 'A3B', default: true },
+          { id: '300b', label: '300B', subtitle: 'A47B', default: false }
+        ]
+      },
       hardware: {
         name: 'hardware',
         title: 'Hardware Platform',
@@ -28,29 +36,41 @@ const ErnieConfigGenerator = () => {
     },
 
     generateCommand: function (values) {
-      const { hardware, strategy } = values;
+      const { modelsize, hardware, strategy } = values;
 
       const strategyArray = Array.isArray(strategy) ? strategy : [];
 
-      // Model path
-      const modelPath = 'baidu/ERNIE-4.5-21B-A3B-PT';
+      // Model path based on selected model size
+      let modelPath;
+      if (modelsize === '21b') {
+        modelPath = 'baidu/ERNIE-4.5-21B-A3B-PT';
+      } else if (modelsize === '300b') {
+        modelPath = 'baidu/ERNIE-4.5-300B-A47B-PT';
+      } else {
+        modelPath = 'baidu/ERNIE-4.5-21B-A3B-PT'; // Default fallback
+      }
 
       let cmd = 'python3 -m sglang.launch_server \\\n';
       cmd += `  --model-path ${modelPath}`;
 
+      // Determine TP, DP, and EP values based on model size
+      const tpValue = modelsize === '300b' ? 8 : 1;
+      const dpValue = modelsize === '300b' ? 8 : 1;
+      const epValue = modelsize === '300b' ? 8 : 1;
+
       // TP strategy
       if (strategyArray.includes('tp')) {
-        cmd += ` \\\n  --tp 1`;
+        cmd += ` \\\n  --tp ${tpValue}`;
       }
 
       // DP strategy
       if (strategyArray.includes('dp')) {
-        cmd += ` \\\n  --dp 1 \\\n  --enable-dp-attention`;
+        cmd += ` \\\n  --dp ${dpValue} \\\n  --enable-dp-attention`;
       }
 
       // EP strategy
       if (strategyArray.includes('ep')) {
-        cmd += ` \\\n  --ep 1`;
+        cmd += ` \\\n  --ep ${epValue}`;
       }
 
       cmd += ` \\\n  --host 0.0.0.0 \\\n  --port 8000`;
