@@ -73,8 +73,6 @@ const ErnieConfigGenerator = () => {
         cmd += ` \\\n  --ep ${epValue}`;
       }
 
-      cmd += ` \\\n  --host 0.0.0.0 \\\n  --port 8000`;
-
       return cmd;
     }
   };
