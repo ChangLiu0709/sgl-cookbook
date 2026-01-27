@@ -55,21 +55,21 @@ const ErnieConfigGenerator = () => {
 
       // Determine TP, DP, and EP values based on model size
       const tpValue = modelsize === '300b' ? 8 : 1;
-      const dpValue = modelsize === '300b' ? 8 : 1;
-      const epValue = modelsize === '300b' ? 8 : 1;
+      const dpValue = modelsize === '300b' ? 8 : null;
+      const epValue = modelsize === '300b' ? 8 : null;
 
       // TP strategy
       if (strategyArray.includes('tp')) {
         cmd += ` \\\n  --tp ${tpValue}`;
       }
 
-      // DP strategy
-      if (strategyArray.includes('dp')) {
+      // DP strategy (only valid for 300B)
+      if (strategyArray.includes('dp') && modelsize === '300b') {
         cmd += ` \\\n  --dp ${dpValue} \\\n  --enable-dp-attention`;
       }
 
-      // EP strategy
-      if (strategyArray.includes('ep')) {
+      // EP strategy (only valid for 300B)
+      if (strategyArray.includes('ep') && modelsize === '300b') {
         cmd += ` \\\n  --ep ${epValue}`;
       }
 
