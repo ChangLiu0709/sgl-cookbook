@@ -12,11 +12,17 @@ import ConfigGenerator from '../../base/ConfigGenerator';
  *   H100 (80GB):  tp=1
  *   H200 (141GB): tp=1
  *   B200 (180GB): tp=1
+ *   MI300X (192GB): tp=1
+ *   MI325X (256GB): tp=1
+ *   MI355X (288GB): tp=1
  *
  * GPU requirements (FP8, ~35GB weights):
  *   H100 (80GB):  tp=1
  *   H200 (141GB): tp=1
  *   B200 (180GB): tp=1
+ *   MI300X (192GB): tp=1
+ *   MI325X (256GB): tp=1
+ *   MI355X (288GB): tp=1
  */
 
 const Qwen36ConfigGenerator = () => {
@@ -30,7 +36,10 @@ const Qwen36ConfigGenerator = () => {
         items: [
           { id: 'h100', label: 'H100', default: true },
           { id: 'h200', label: 'H200', default: false },
-          { id: 'b200', label: 'B200', default: false }
+          { id: 'b200', label: 'B200', default: false },
+          { id: 'mi300x', label: 'MI300X', default: false },
+          { id: 'mi325x', label: 'MI325X', default: false },
+          { id: 'mi355x', label: 'MI355X', default: false }
         ]
       },
       quantization: {
@@ -91,7 +100,10 @@ const Qwen36ConfigGenerator = () => {
     modelConfigs: {
       h100: { bf16: { tp: 1, mem: 0.8 }, fp8: { tp: 1, mem: 0.8 } },
       h200: { bf16: { tp: 1, mem: 0.8 }, fp8: { tp: 1, mem: 0.8 } },
-      b200: { bf16: { tp: 1, mem: 0.8 }, fp8: { tp: 1, mem: 0.8 } }
+      b200: { bf16: { tp: 1, mem: 0.8 }, fp8: { tp: 1, mem: 0.8 } },
+      mi300x: { bf16: { tp: 1, mem: 0.8 }, fp8: { tp: 1, mem: 0.8 } },
+      mi325x: { bf16: { tp: 1, mem: 0.8 }, fp8: { tp: 1, mem: 0.8 } },
+      mi355x: { bf16: { tp: 1, mem: 0.8 }, fp8: { tp: 1, mem: 0.8 } }
     },
 
     generateCommand: function (values) {
@@ -107,6 +119,7 @@ const Qwen36ConfigGenerator = () => {
 
       const tpValue = hwConfig.tp;
       const memFraction = hwConfig.mem;
+      const isAmd = ['mi300x', 'mi325x', 'mi355x'].includes(hardware);
 
       // Prepend env var if MTP is enabled
       let cmd = '';
@@ -134,9 +147,11 @@ const Qwen36ConfigGenerator = () => {
         }
       });
 
-      // Blackwell backend
+      // Hardware-specific attention backend
       if (hardware === 'b200') {
         cmd += ` \\\n  --attention-backend trtllm_mha`;
+      } else if (isAmd) {
+        cmd += ` \\\n  --attention-backend triton`;
       }
 
       // Add memory fraction last

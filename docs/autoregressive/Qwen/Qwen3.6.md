@@ -38,6 +38,12 @@ uv pip install 'git+https://github.com/sgl-project/sglang.git#subdirectory=pytho
 
 # Or use Docker (NVIDIA GPUs)
 docker pull lmsysorg/sglang:latest
+
+# For MI300X/MI325X
+docker pull lmsysorg/sglang:v0.5.11-rocm720-mi30x
+
+# For MI355X
+docker pull lmsysorg/sglang:v0.5.11-rocm720-mi35x
 ```
 
 For the full Docker setup and other installation methods, please refer to the [official SGLang installation guide](https://docs.sglang.ai/get_started/install.html).
@@ -74,6 +80,9 @@ import Qwen36ConfigGenerator from '@site/src/components/autoregressive/Qwen36Con
 | H100     | 80GB   | 1       | 1      |
 | H200     | 141GB  | 1       | 1      |
 | B200     | 183GB  | 1       | 1      |
+| MI300X   | 192GB  | 1       | 1      |
+| MI325X   | 256GB  | 1       | 1      |
+| MI355X   | 288GB  | 1       | 1      |
 
 
 ## 4. Model Invocation
