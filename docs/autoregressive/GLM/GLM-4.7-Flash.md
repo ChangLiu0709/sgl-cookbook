@@ -18,7 +18,7 @@ For more details, please refer to the [official GLM-4.7 documentation](https://d
 
 - **Efficient MoE Architecture**: 30B-A3B sparse activation for optimal performance/efficiency trade-off
 - **Multiple Quantizations**: BF16 and FP8 variants for different performance/memory trade-offs
-- **Hardware Optimization**: Specifically tuned for NVIDIA H100/H200/B200 GPUs
+- **Hardware Optimization**: Specifically tuned for NVIDIA H100/H200/B200 and AMD MI300X GPUs
 - **High Performance**: Optimized for both throughput and latency scenarios
 
 **Available Models:**
@@ -38,6 +38,35 @@ Please refer to the [official SGLang installation guide](https://docs.sglang.ai/
 ## 3. Model Deployment
 
 This section provides deployment configurations optimized for different hardware platforms and use cases.
+
+### AMD GPU (MI300X) Docker Deployment
+
+For AMD MI300X GPUs, use the official SGLang ROCm Docker image:
+
+```bash
+docker run -d --name sglang_glm47flash \
+  --device=/dev/kfd --device=/dev/dri \
+  --security-opt seccomp=unconfined \
+  --group-add video \
+  --ipc=host --shm-size 64g \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  -p 30000:30000 \
+  -e SGLANG_USE_AITER=0 \
+  -e USE_ROCM_AITER_ROPE_BACKEND=0 \
+  lmsysorg/sglang:v0.5.11-rocm720-mi30x \
+  python3 -m sglang.launch_server \
+    --model zai-org/GLM-4.7-Flash \
+    --tp 1 \
+    --trust-remote-code \
+    --attention-backend triton \
+    --host 0.0.0.0 --port 30000
+```
+
+:::tip AMD-Specific Notes
+- **Environment Variables**: `SGLANG_USE_AITER=0` and `USE_ROCM_AITER_ROPE_BACKEND=0` are required to avoid incompatibilities with the aiter rope backend for MLA-based models on MI300X.
+- **Attention Backend**: `--attention-backend triton` is required for AMD GPUs.
+- **Trust Remote Code**: `--trust-remote-code` is required for this model on AMD.
+:::
 
 ### 3.1 Basic Configuration
 
