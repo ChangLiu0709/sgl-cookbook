@@ -58,6 +58,39 @@ import MiMoConfigGenerator from '@site/src/components/autoregressive/MiMoConfigG
 
 MI355X (ROCm) is validated in the selector above with `--tp-size 4`, Triton attention, and `--disable-custom-all-reduce`. `--tp-size 8` hit a QKV sharding error during validation. EAGLE speculative decoding is still WIP on MI355X.
 
+### AMD MI300X Docker Deployment
+
+For AMD MI300X GPUs, use the official SGLang ROCm Docker image:
+
+```bash
+docker run -d --name sglang_mimo_v2_flash \
+  --device=/dev/kfd --device=/dev/dri \
+  --security-opt seccomp=unconfined \
+  --group-add video \
+  --ipc=host --shm-size 64g \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  -p 30000:30000 \
+  -e SGLANG_USE_AITER=0 \
+  -e USE_ROCM_AITER_ROPE_BACKEND=0 \
+  lmsysorg/sglang:v0.5.11-rocm720-mi30x \
+  bash -c "SGLANG_USE_AITER=0 USE_ROCM_AITER_ROPE_BACKEND=0 \
+    python3 -m sglang.launch_server \
+    --model XiaomiMiMo/MiMo-V2-Flash \
+    --tp 2 --trust-remote-code \
+    --mem-fraction-static 0.80 \
+    --attention-backend triton \
+    --disable-cuda-graph \
+    --disable-custom-all-reduce \
+    --host 0.0.0.0 --port 30000"
+```
+
+:::tip AMD MI300X Notes
+- **TP=2**: MiMo-V2-Flash (309B total / 15B active MoE) requires at least 2 MI300X GPUs.
+- **`--disable-cuda-graph`**: Required on MI300X to avoid FP8 Triton kernel compilation errors.
+- **Environment Variables**: `SGLANG_USE_AITER=0` and `USE_ROCM_AITER_ROPE_BACKEND=0` are required for MLA model compatibility on AMD.
+- **EAGLE speculative decoding**: Not yet supported on MI300X.
+:::
+
 ## Testing the deployment
 
 Once the server is running, test it with a chat completion request in another terminal:

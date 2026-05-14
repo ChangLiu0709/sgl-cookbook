@@ -15,6 +15,7 @@ const MiMoConfigGenerator = () => {
             items: [
                 { id: 'h200', label: 'H200', default: true },
                 { id: 'h100', label: 'H100', default: false },
+                { id: 'mi300x', label: 'MI300X', default: false },
                 { id: 'mi355x', label: 'MI355X', default: false }
             ]
         },
@@ -50,41 +51,58 @@ const MiMoConfigGenerator = () => {
     generateCommand: function(values) {
         const { hardware, strategy, reasoning } = values;
         const isMI355X = hardware === 'mi355x';
+        const isMI300X = hardware === 'mi300x';
+        const isAMD = isMI300X || isMI355X;
 
         const modelPath = 'XiaomiMiMo/MiMo-V2-Flash';
         const strategyArray = Array.isArray(strategy) ? strategy : [];
         const reasoningArray = Array.isArray(reasoning) ? reasoning : [];
 
-        if (isMI355X && strategyArray.includes('mtp')) {
-            return '# MI355X Speculative Decoding (EAGLE): Work In Progress\n'
-                + '# Uncheck "Multi-token Prediction (MTP)" to view the validated non-speculative MI355X command.';
+        // AMD: MTP (speculative decoding) is not yet supported
+        if (isAMD && strategyArray.includes('mtp')) {
+            const gpuName = isMI300X ? 'MI300X' : 'MI355X';
+            return `# ${gpuName} Speculative Decoding (EAGLE): Work In Progress\\n`
+                + `# Uncheck "Multi-token Prediction (MTP)" to view the validated non-speculative ${gpuName} command.`;
         }
 
-        const commandPrefix = isMI355X
-            ? 'PYTHONPATH=/sgl-workspace/aiter SGLANG_USE_AITER=0 USE_ROCM_AITER_ROPE_BACKEND=0'
-            : 'SGLANG_ENABLE_SPEC_V2=1';
-        const tpSize = isMI355X ? 4 : 8;
+        let commandPrefix;
+        let tpSize;
+        if (isMI300X) {
+            commandPrefix = 'SGLANG_USE_AITER=0 USE_ROCM_AITER_ROPE_BACKEND=0';
+            tpSize = 2;
+        } else if (isMI355X) {
+            commandPrefix = 'PYTHONPATH=/sgl-workspace/aiter SGLANG_USE_AITER=0 USE_ROCM_AITER_ROPE_BACKEND=0';
+            tpSize = 4;
+        } else {
+            commandPrefix = 'SGLANG_ENABLE_SPEC_V2=1';
+            tpSize = 8;
+        }
 
         let cmd = `${commandPrefix} sglang serve \\\n`;
         cmd += `  --model-path ${modelPath} \\\n`;
         cmd += `  --trust-remote-code \\\n`;
         cmd += `  --tp-size ${tpSize}`;
 
-        // DP settings
-        if (!isMI355X && strategyArray.includes('dp')) {
+        // DP settings (NVIDIA only)
+        if (!isAMD && strategyArray.includes('dp')) {
             cmd += ` \\\n  --dp-size 2 \\\n  --enable-dp-attention`;
         }
 
         // Performance Optimizations
         if (strategyArray.includes('optimization')) {
-             cmd += ` \\\n  --mem-fraction-static 0.75 \\\n  --max-running-requests 128 \\\n  --chunked-prefill-size 16384 \\\n  --model-loader-extra-config '{"enable_multithread_load": "true","num_threads": 64}'`;
-             cmd += isMI355X
-                 ? ` \\\n  --attention-backend triton \\\n  --prefill-attention-backend triton \\\n  --decode-attention-backend triton \\\n  --disable-custom-all-reduce`
-                 : ` \\\n  --attention-backend fa3`;
+             if (isMI300X) {
+                 cmd += ` \\\n  --mem-fraction-static 0.80 \\\n  --attention-backend triton \\\n  --prefill-attention-backend triton \\\n  --decode-attention-backend triton \\\n  --disable-cuda-graph \\\n  --disable-custom-all-reduce`;
+             } else if (isMI355X) {
+                 cmd += ` \\\n  --mem-fraction-static 0.75 \\\n  --max-running-requests 128 \\\n  --chunked-prefill-size 16384 \\\n  --model-loader-extra-config '{"enable_multithread_load": "true","num_threads": 64}'`;
+                 cmd += ` \\\n  --attention-backend triton \\\n  --prefill-attention-backend triton \\\n  --decode-attention-backend triton \\\n  --disable-custom-all-reduce`;
+             } else {
+                 cmd += ` \\\n  --mem-fraction-static 0.75 \\\n  --max-running-requests 128 \\\n  --chunked-prefill-size 16384 \\\n  --model-loader-extra-config '{"enable_multithread_load": "true","num_threads": 64}'`;
+                 cmd += ` \\\n  --attention-backend fa3`;
+             }
         }
 
-        // MTP/Speculative settings
-        if (!isMI355X && strategyArray.includes('mtp')) {
+        // MTP/Speculative settings (NVIDIA only)
+        if (!isAMD && strategyArray.includes('mtp')) {
             cmd += ` \\\n  --speculative-algorithm EAGLE \\\n  --speculative-num-steps 3 \\\n  --speculative-eagle-topk 1 \\\n  --speculative-num-draft-tokens 4 \\\n  --enable-multi-layer-eagle`;
         }
 
