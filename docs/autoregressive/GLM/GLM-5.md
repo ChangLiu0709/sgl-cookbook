@@ -51,11 +51,11 @@ import GLM5ConfigGenerator from '@site/src/components/autoregressive/GLM5ConfigG
 | H200     | tp=8  | tp=16 |
 | B200     | tp=8  | tp=16 |
 | MI300X/MI325X | — | tp=8 |
-| MI355X   | — | tp=8 |
+| MI355X   | tp=4 | tp=8 |
 
 - **B200 (FP8)**: Use `--ep 1 --attention-backend nsa --nsa-decode-backend trtllm --nsa-prefill-backend trtllm --moe-runner-backend flashinfer_trtllm --enable-flashinfer-allreduce-fusion` for optimized NSA and MoE backends on Blackwell. Also add `--quantization fp8` for FP8 weight quantization.
 
-- **AMD GPUs**: Use `--nsa-prefill-backend tilelang --nsa-decode-backend tilelang` for the NSA attention backend. Add `--chunked-prefill-size 131072` and `--watchdog-timeout 1200` (20 minutes for weight loading). EAGLE speculative decoding is not currently supported on AMD for GLM-5.
+- **AMD GPUs**: Use `--nsa-prefill-backend tilelang --nsa-decode-backend tilelang` for the NSA attention backend. Add `--chunked-prefill-size 131072` and `--watchdog-timeout 1200` (20 minutes for weight loading). FP8 is supported on MI355X with `--kv-cache-dtype fp8_e4m3 --disable-radix-cache` (tp=4). EAGLE speculative decoding is not currently supported on MI300X/MI325X for GLM-5.
 - For other configuration tips, please refer to [DeepSeek V3.2 documentation](https://docs.sglang.io/basic_usage/deepseek_v32.html). GLM-5 and DeepSeek V3.2 share the same model structure, so the optimization techniques between these two models are also common (MTP, DSA kernel, Context Parallel...).
 - Use `--json-model-override-args '{"index_topk_pattern": "FFSFSSSFSSFFFSSSFFFSFSSSSSSFFSFFSFFSSFFFFFFSFFFFFSFFSSSSSSFSFFFSFSSSFSFFSFFSSS"}'` for GLM-5-FP8 if you want to enable the [IndexCache](https://github.com/THUDM/IndexCache) method. This feature is supported through [this PR](https://github.com/sgl-project/sglang/pull/21405) and introduces only a small accuracy loss. However, if you are running rigorous accuracy evaluations, it is not recommended to enable this feature.
 
@@ -84,7 +84,9 @@ sglang serve \
 
 ### 4.1 MI300X/MI325X/MI355X (ROCm) Server Command
 
-The following ROCm command is an additional option for AMD GPUs and does not replace the NVIDIA instructions above.
+The following ROCm commands are additional options for AMD GPUs and do not replace the NVIDIA instructions above.
+
+**MI300X/MI325X/MI355X BF16:**
 
 ```shell
 sglang serve \
@@ -95,6 +97,24 @@ sglang serve \
   --nsa-decode-backend tilelang \
   --chunked-prefill-size 131072 \
   --mem-fraction-static 0.80 \
+  --watchdog-timeout 1200 \
+  --host 0.0.0.0 \
+  --port 30000
+```
+
+**MI355X FP8:**
+
+```shell
+sglang serve \
+  --model zai-org/GLM-5-FP8 \
+  --tp 4 \
+  --trust-remote-code \
+  --nsa-prefill-backend tilelang \
+  --nsa-decode-backend tilelang \
+  --chunked-prefill-size 131072 \
+  --kv-cache-dtype fp8_e4m3 \
+  --disable-radix-cache \
+  --mem-fraction-static 0.85 \
   --watchdog-timeout 1200 \
   --host 0.0.0.0 \
   --port 30000

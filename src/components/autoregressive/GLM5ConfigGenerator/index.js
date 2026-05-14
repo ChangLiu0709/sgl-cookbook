@@ -11,7 +11,7 @@ import ConfigGenerator from '../../base/ConfigGenerator';
  *   H200: FP8 tp=8, BF16 tp=16
  *   B200: NVFP4 tp=4, FP8 tp=8, BF16 tp=16
  *   MI300X/MI325X: BF16 tp=8
- *   MI355X: BF16 tp=8
+ *   MI355X: FP8 tp=4, BF16 tp=8
  */
 const GLM5ConfigGenerator = () => {
   const config = {
@@ -34,11 +34,11 @@ const GLM5ConfigGenerator = () => {
         title: 'Quantization',
         getDynamicItems: (values) => {
           const hw = values.hardware;
-          const isAMD = hw === 'mi300x' || hw === 'mi355x';
+          const isMI300X = hw === 'mi300x';
           const isB200 = hw === 'b200';
           return [
-            { id: 'bf16', label: 'BF16', subtitle: 'Full Weights', default: isAMD },
-            { id: 'fp8', label: 'FP8', subtitle: 'High Throughput', default: !isAMD && !isB200, disabled: isAMD, disabledReason: isAMD ? 'FP8 not verified on AMD' : '' },
+            { id: 'bf16', label: 'BF16', subtitle: 'Full Weights', default: isMI300X },
+            { id: 'fp8', label: 'FP8', subtitle: 'High Throughput', default: !isMI300X && !isB200, disabled: isMI300X, disabledReason: isMI300X ? 'FP8 not verified on MI300X/MI325X' : '' },
             { id: 'nvfp4', label: 'NVFP4', subtitle: 'Highest Throughput', default: isB200, disabled: !isB200, disabledReason: !isB200 ? 'NVFP4 only available on B200' : '' }
           ];
         }
@@ -77,7 +77,7 @@ const GLM5ConfigGenerator = () => {
       speculative: {
         name: 'speculative',
         title: 'Speculative Decoding',
-        condition: (values) => values.hardware !== 'mi300x' && values.hardware !== 'mi355x' && values.quantization !== 'nvfp4',
+        condition: (values) => values.hardware !== 'mi300x' && values.quantization !== 'nvfp4',
         items: [
           { id: 'disabled', label: 'Disabled', default: false },
           { id: 'enabled', label: 'Enabled', default: true }
@@ -92,16 +92,18 @@ const GLM5ConfigGenerator = () => {
       h200: { fp8: { tp: 8, mem: 0.85 }, bf16: { tp: 16, mem: 0.85 } },
       b200: { nvfp4: { tp: 4, mem: 0.9 }, fp8: { tp: 8, mem: 0.9 }, bf16: { tp: 16, mem: 0.9 } },
       mi300x: { bf16: { tp: 8, mem: 0.80 } },
-      mi355x: { bf16: { tp: 8, mem: 0.80 } }
+      mi355x: { fp8: { tp: 4, mem: 0.85 }, bf16: { tp: 8, mem: 0.80 } }
     },
 
     generateCommand: function (values) {
       const { hardware, quantization } = values;
-      const isAMD = hardware === 'mi300x' || hardware === 'mi355x';
+      const isMI300X = hardware === 'mi300x';
+      const isMI355X = hardware === 'mi355x';
+      const isAMD = isMI300X || isMI355X;
       const isNVFP4 = quantization === 'nvfp4';
 
-      // AMD only supports BF16; NVIDIA supports BF16, FP8, and NVFP4 (B200 only)
-      const effectiveQuant = isAMD ? 'bf16' : quantization;
+      // MI300X only supports BF16; MI355X supports both BF16 and FP8; NVIDIA supports BF16, FP8, and NVFP4 (B200 only)
+      const effectiveQuant = isMI300X ? 'bf16' : quantization;
 
       // Model name varies by quantization
       let modelName;
@@ -146,6 +148,11 @@ const GLM5ConfigGenerator = () => {
         cmd += ' \\\n  --nsa-decode-backend tilelang';
         cmd += ' \\\n  --chunked-prefill-size 131072';
         cmd += ' \\\n  --watchdog-timeout 1200';
+        // MI355X FP8: additional optimizations from InferenceX benchmarking
+        if (isMI355X && effectiveQuant === 'fp8') {
+          cmd += ' \\\n  --kv-cache-dtype fp8_e4m3';
+          cmd += ' \\\n  --disable-radix-cache';
+        }
       }
 
       // DP Attention: --dp matches --tp

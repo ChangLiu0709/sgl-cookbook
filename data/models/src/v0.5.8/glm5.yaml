@@ -5,6 +5,8 @@
 #   H100: FP8 tp=16, BF16 tp=32
 #   H200: FP8 tp=8, BF16 tp=16
 #   B200: NVFP4 tp=4, FP8 tp=8, BF16 tp=16
+#   MI300X/MI325X: BF16 tp=8
+#   MI355X: FP8 tp=4, BF16 tp=8
 
 vendor: zai-org
 
@@ -13,6 +15,8 @@ defaults:
     H100: { tp: 16 }
     H200: { tp: 8 }
     B200: { tp: 8 }
+    MI300X: { tp: 8 }
+    MI355X: { tp: 4 }
   configurations:
     - name: default
       nodes: single
@@ -51,6 +55,8 @@ families:
           H100: { tp: 32 }
           H200: { tp: 16 }
           B200: { tp: 16 }
+          MI300X: { tp: 8 }
+          MI355X: { tp: 8 }
 
       # GLM-5 NVFP4 (Blackwell only)
       - name: GLM-5-NVFP4
@@ -62,3 +68,5 @@ families:
       # GLM-5 FP8
       - name: GLM-5-FP8
         quantization: fp8
+        hardware:
+          MI355X: { tp: 4 }
