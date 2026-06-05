@@ -45,7 +45,7 @@ docker pull lmsysorg/sglang:nightly-dev-20260216-d3bae71e
 docker pull lmsysorg/sglang:v0.5.9-rocm720-mi30x
 
 # Or use Docker (AMD MI355X)
-docker pull lmsysorg/sglang:v0.5.9-rocm720-mi35x
+docker pull lmsysorg/sglang:v0.5.12.post1-rocm720-mi35x-20260528
 ```
 
 For the full Docker setup and other installation methods, please refer to the [official SGLang installation guide](https://docs.sglang.ai/get_started/install.html).
@@ -91,7 +91,7 @@ import Qwen35ConfigGenerator from '@site/src/components/autoregressive/Qwen35Con
         - **B300 (275GB)** runs with tp=2.
         - **MI300X (192GB)** runs with tp=4.
         - **MI325X (256GB)** runs with tp=2.
-        - **MI355X (288GB)** runs with tp=2.
+        - **MI355X (288GB)** runs with tp=4.
     - **FP4**: The FP4 quantized model requires ~250GB for weights, cutting memory by almost 4x. Only compatible with B200/B300 (Blackwell architecture).
         - **B200 (183GB)** runs with tp=4.
         - **B300 (275GB)** runs with tp=2.
@@ -104,7 +104,7 @@ import Qwen35ConfigGenerator from '@site/src/components/autoregressive/Qwen35Con
 | B300     | 275GB  | 4       | 2      | 2               |
 | MI300X   | 192GB  | 8       | 4      | N/A             |
 | MI325X   | 256GB  | 4       | 2      | N/A             |
-| MI355X   | 288GB  | 4       | 2      | N/A             |
+| MI355X   | 288GB  | 4       | 4      | N/A             |
 
 :::caution FP8 KV Cache
 `--kv-cache-dtype fp8_e4m3` quantizes the KV cache to FP8 at runtime. Since these FP8 model checkpoints do not include pre-calibrated KV cache scaling factors, SGLang defaults to a scale of 1.0, which may cause noticeable accuracy degradation on reasoning-heavy tasks. It is not included in the generated commands above; add it manually only if memory constraints require the trade-off.
@@ -131,9 +131,9 @@ sglang serve \
   --port 30000
 ```
 
-**AMD:**
+**AMD (MI300X/MI325X):**
 
-Deploy Qwen3.5-397B-A17B with the following command (MI300X/MI325X/MI355X):
+Deploy Qwen3.5-397B-A17B with the following command (MI300X/MI325X):
 
 ```shell
 sglang serve \
@@ -146,7 +146,28 @@ sglang serve \
   --host 0.0.0.0 \
   --port 30000
 ```
-> **Note:** TP8 works on all MI GPUs. For MI325X/MI355X, you can use --tp 4 as the minimum requirement.
+> **Note:** TP8 works on all MI GPUs. For MI325X, you can use --tp 4 as the minimum requirement.
+
+**AMD (MI355X):**
+
+Deploy Qwen3.5-397B-A17B-FP8 with the following command (MI355X):
+
+```shell
+sglang serve \
+  --model-path Qwen/Qwen3.5-397B-A17B-FP8 \
+  --tp 4 \
+  --reasoning-parser qwen3 \
+  --tool-call-parser qwen3_coder \
+  --attention-backend aiter \
+  --enable-aiter-allreduce-fusion \
+  --disable-radix-cache \
+  --chunked-prefill-size 32768 \
+  --page-size 16 \
+  --mem-fraction-static 0.8 \
+  --host 0.0.0.0 \
+  --port 30000
+```
+> **Note:** MI355X uses the `aiter` attention backend with allreduce fusion for optimized throughput. The command above is aligned with the [InferenceX benchmark](https://github.com/SemiAnalysisAI/InferenceX/pull/1669).
 
 ### 4.1 Basic Usage
 

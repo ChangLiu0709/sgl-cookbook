@@ -62,7 +62,7 @@ families:
           B300: { tp: 2 }
           MI300X: { tp: 4 }
           MI325X: { tp: 2 }
-          MI355X: { tp: 2 }
+          MI355X: { tp: 4 }
 
       - name: Qwen3.5-397B-A17B-NVFP4
         quantization: fp4

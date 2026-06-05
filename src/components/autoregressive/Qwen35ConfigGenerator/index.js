@@ -17,7 +17,7 @@ import ConfigGenerator from '../../base/ConfigGenerator';
  *   27B/9B/4B/2B/0.8B: tp=1 on all hardware (including MI300X, MI325X, MI355X)
  *
  * GPU requirements (FP8, where available):
- *   397B-A17B: H100 tp=8, H200 tp=8 ep=8, B200 tp=4, B300 tp=2, MI300X tp=4, MI325X tp=2, MI355X tp=2
+ *   397B-A17B: H100 tp=8, H200 tp=8 ep=8, B200 tp=4, B300 tp=2, MI300X tp=4, MI325X tp=2, MI355X tp=4
  *   122B-A10B: H100 tp=2, H200 tp=1, B200 tp=1, B300 tp=1, MI300X tp=1, MI325X tp=1, MI355X tp=1
  *   35B-A3B:   H100 tp=1, H200 tp=1, B200 tp=1, B300 tp=1, MI300X tp=1, MI325X tp=1, MI355X tp=1
  *   27B:       tp=1 on all hardware (including MI300X, MI325X, MI355X)
@@ -160,7 +160,7 @@ const Qwen35ConfigGenerator = () => {
         b300: { bf16: { tp: 4,  mem: 0.8 }, fp8: { tp: 2, mem: 0.8 }, fp4: { tp: 2, mem: 0.8 } },
         mi300x: { bf16: { tp: 8, mem: 0.8 }, fp8: { tp: 4, mem: 0.8 } },
         mi325x: { bf16: { tp: 4, mem: 0.8 }, fp8: { tp: 2, mem: 0.8 } },
-        mi355x: { bf16: { tp: 4, mem: 0.8 }, fp8: { tp: 2, mem: 0.8 } }
+        mi355x: { bf16: { tp: 4, mem: 0.8 }, fp8: { tp: 4, mem: 0.8 } }
       },
       '122b': {
         h100: { bf16: { tp: 4, mem: 0.8 }, fp8: { tp: 2, mem: 0.8 } },
@@ -286,8 +286,8 @@ const Qwen35ConfigGenerator = () => {
         cmd += ` \\\n  --tokenizer-worker-num 6`;
       }
 
-      // Enable allreduce fusion for all Qwen3.5 configs (skip for FP4: benchmark only enables this for TP≥8).
-      if (quantization !== 'fp4') {
+      // Enable allreduce fusion for NVIDIA (skip MI355X which uses aiter variant, and skip FP4)
+      if (quantization !== 'fp4' && hardware !== 'mi355x') {
         cmd += ` \\\n  --enable-flashinfer-allreduce-fusion`;
       }
 
@@ -305,8 +305,17 @@ const Qwen35ConfigGenerator = () => {
       }
 
       // Append AMD GPU-specific backend configurations
-      if (hardware === 'mi300x' || hardware === 'mi325x' || hardware === 'mi355x') {
+      if (hardware === 'mi300x' || hardware === 'mi325x') {
         cmd += ` \\\n  --attention-backend triton`;
+      }
+
+      // MI355X uses aiter attention backend with additional optimizations
+      if (hardware === 'mi355x') {
+        cmd += ` \\\n  --attention-backend aiter`;
+        cmd += ` \\\n  --enable-aiter-allreduce-fusion`;
+        cmd += ` \\\n  --disable-radix-cache`;
+        cmd += ` \\\n  --chunked-prefill-size 32768`;
+        cmd += ` \\\n  --page-size 16`;
       }
 
       // Tokenizer workers for H200 and B200/B300
